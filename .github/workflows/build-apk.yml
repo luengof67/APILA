@@ -1,0 +1,54 @@
+name: Compilar APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+
+      - name: Instalar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Instalar Java (JDK 21)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Preparar el SDK de Android
+        uses: android-actions/setup-android@v3
+
+      - name: Aceptar licencias del SDK
+        run: yes | sdkmanager --licenses || true
+
+      - name: Instalar dependencias
+        run: npm install
+
+      - name: Crear la plataforma Android
+        run: npx cap add android
+
+      - name: Generar iconos y splash (gorro de cocinero)
+        run: npx @capacitor/assets generate --android
+
+      - name: Sincronizar web -> Android
+        run: npx cap sync android
+
+      - name: Compilar el APK (debug)
+        run: |
+          cd android
+          chmod +x ./gradlew
+          ./gradlew assembleDebug
+
+      - name: Subir el APK como artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: APILA-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
